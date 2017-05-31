@@ -2,8 +2,8 @@ package com.example.kirito.wechatrecordbutton;
 
 import android.graphics.drawable.AnimationDrawable;
 import android.media.MediaPlayer;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -11,6 +11,8 @@ import android.widget.ListView;
 import com.example.kirito.wechatrecordbutton.adapter.ListViewAdapter;
 import com.example.kirito.wechatrecordbutton.support.AudioButton;
 import com.example.kirito.wechatrecordbutton.support.MediaPlay;
+import com.example.kirito.wechatrecordbutton.xunfei.XunFeiSdk;
+import com.iflytek.cloud.SpeechRecognizer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,24 +23,50 @@ public class MainActivity extends AppCompatActivity {
     private List<RecordItem> items;
     private ListViewAdapter adapter;
     private View animeView;
+    private SpeechRecognizer mIat;//讯飞的录音识别类
+    String TAG=getClass().getSimpleName().toString();
+    private XunFeiSdk mXunFeiSdk;
+    private String mMessage;
+    private boolean haveMessage;
+    private boolean isRelease;
+    private float mTime;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        initXunFei();
         lv = (ListView) findViewById(R.id.lv);
         ab = (AudioButton) findViewById(R.id.btn);
         items = new ArrayList<>();
 
-        ab.setOnFinishListener(new AudioButton.onFinishListener() {
+        ab.setOnAudioButtonListener(new AudioButton.onAudioListener() {
             @Override
-            public void finishRecord(String path, float time) {
-                RecordItem item = new RecordItem(path, (int) time);
-                items.add(item);
-                adapter.notifyDataSetChanged();
-                //每次更新完listview指向最后的item
-                lv.setSelection(items.size() - 1);
+            public void onLongClick(View v) {
+                mXunFeiSdk.startRecognizer();
+                ab.audioPrepared();
+            }
+
+            @Override
+            public void finishRecord(float time) {
+                isRelease=true;
+                mTime=time;
+                if(haveMessage){
+                    isRelease=false;
+                    mXunFeiSdk.stop();
+                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) time);
+                    items.add(item);
+                    adapter.notifyDataSetChanged();
+                    //每次更新完listview指向最后的item
+                    lv.setSelection(items.size() - 1);
+                    haveMessage=false;
+                }
+
+            }
+
+            @Override
+            public void onCancel() {
+                mXunFeiSdk.cancelRecoder();
             }
         });
         adapter = new ListViewAdapter(MainActivity.this,items);
@@ -69,6 +97,36 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void initXunFei() {
+        mXunFeiSdk = XunFeiSdk.getInstance(this);
+        mXunFeiSdk.setOnXFSdkListener(new XunFeiSdk.XunFeiSdkListener() {
+            @Override
+            public void onVolumeChanged(int volume) {
+                ab.setVolume(volume);
+            }
+
+            @Override
+            public void onResult(String message) {
+                haveMessage=true;
+                mMessage =message;
+                if(isRelease){
+                    mXunFeiSdk.stop();
+                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) mTime);
+                    items.add(item);
+                    adapter.notifyDataSetChanged();
+                    //每次更新完listview指向最后的item
+                    lv.setSelection(items.size() - 1);
+                    isRelease=false;
+                    haveMessage=false;
+                }
+            }
+
+            @Override
+            public void onInitComplete() {
+            }
+        });
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -92,6 +150,16 @@ public class MainActivity extends AppCompatActivity {
         private String path;
         private int time;
 
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        private String message;
+
         public String getPath() {
             return path;
         }
@@ -108,8 +176,8 @@ public class MainActivity extends AppCompatActivity {
             this.time = time;
         }
 
-        public RecordItem(String path, int time) {
-
+        public RecordItem(String message,String path, int time) {
+            this.message=message;
             this.path = path;
             this.time = time;
         }

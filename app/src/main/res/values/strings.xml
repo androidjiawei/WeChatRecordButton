@@ -1,5 +1,6 @@
 <resources>
-    <string name="app_name">WechatRecordButton</string>
+    <string name="app_name">welinkdemo</string>
+    <string name="app_id">5922b4ad</string>
 
     <string name="btn_state_normal">按下 录音</string>
     <string name="btn_state_recordinng">松手 发送</string>

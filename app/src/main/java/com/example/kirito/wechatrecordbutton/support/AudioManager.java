@@ -1,9 +1,6 @@
 package com.example.kirito.wechatrecordbutton.support;
 
-import android.content.Context;
-import android.media.AudioFormat;
 import android.media.MediaRecorder;
-import android.util.Log;
 
 import java.io.File;
 import java.util.UUID;
@@ -79,7 +76,7 @@ public class AudioManager {
     }
 
     public int getVoiceLevel(int maxLevel){
-        if (isPrepared){//mMediaRecorder.getMaxAmplitude()值在1-12367之间
+        if (isPrepared){//mMediaRecorder.getMaxAmplitude()值在1-12367之间32767
             try{//返回值在1-7之间
                 return maxLevel * mMediaRecorder.getMaxAmplitude() / 12368 + 1;
             }catch (Exception e){

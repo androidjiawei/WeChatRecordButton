@@ -8,7 +8,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ArrayAdapter;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import com.example.kirito.wechatrecordbutton.MainActivity;
@@ -45,6 +44,7 @@ public class ListViewAdapter extends ArrayAdapter<MainActivity.RecordItem> {
             //这里获取的是背景框的FrameLayout的view对象，为了改变背景框的长度
             holder.length = convertView.findViewById(R.id.fl);
             holder.time = (TextView) convertView.findViewById(R.id.tv_time);
+            holder.message = (TextView) convertView.findViewById(R.id.tv_message);
             convertView.setTag(holder);
         }else {
             holder = (viewHolder) convertView.getTag();
@@ -53,6 +53,7 @@ public class ListViewAdapter extends ArrayAdapter<MainActivity.RecordItem> {
         int time = item.getTime();
         //注意转义字符
         holder.time.setText(time + "\"");
+        holder.message.setText(item.getMessage());
         ViewGroup.LayoutParams lp = holder.length.getLayoutParams();
         //控制录音长度最长为：itemMinWidth + itemMaxWidth,以及类型转换
         if (time <= 60){
@@ -66,5 +67,6 @@ public class ListViewAdapter extends ArrayAdapter<MainActivity.RecordItem> {
     class viewHolder{
         View length;
         TextView time;
+        TextView message;
     }
 }
