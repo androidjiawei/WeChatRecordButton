@@ -1,16 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:layout_gravity="center_vertical"
                 android:gravity="center_vertical"
                 android:layout_marginRight="4dp">
 
-    <RelativeLayout
+    <LinearLayout
         android:layout_marginTop="20dp"
-        android:layout_width="match_parent"
+        android:layout_alignParentRight="true"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_centerVertical="true"
+            android:gravity="center_vertical"
+            android:textSize="18sp"
+            android:text="2"
+            android:textColor="#978c8c"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <FrameLayout
+            android:id="@+id/fl"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="4dp"
+            android:layout_weight="100"
+            android:background="@drawable/chatto_bg_focused"
+            android:layout_width="wrap_content"
+            android:layout_marginLeft="3dp"
+            android:layout_height="wrap_content">
+            <!--android:background="@drawable/adj" 使用background而不是src-->
+            <View
+                android:id="@+id/v_anime"
+                android:background="@drawable/adj"
+                android:layout_gravity="center_vertical|left"
+                android:layout_width="25dp"
+                android:layout_height="25dp"/>
+            <TextView
+                android:id="@+id/tv_message"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="message"
+                android:gravity="right"
+                android:layout_marginTop="3dp"
+                android:textSize="16sp"
+                android:layout_marginLeft="30dp"
+                android:layout_marginRight="43dp"
+                />
+        </FrameLayout>
 
         <ImageView
             android:id="@+id/iv_thumb"
@@ -20,45 +58,6 @@
             android:layout_width="40dp"
             android:layout_height="40dp"/>
 
-        <FrameLayout
-            android:id="@+id/fl"
-            android:layout_centerVertical="true"
-            android:layout_marginRight="4dp"
-            android:background="@drawable/chatto_bg_focused"
-            android:layout_toLeftOf="@id/iv_thumb"
-            android:layout_width="wrap_content"
-            android:layout_marginLeft="3dp"
-            android:layout_height="wrap_content">
-            <!--android:background="@drawable/adj" 使用background而不是src-->
-            <View
-                android:id="@+id/v_anime"
-                android:background="@drawable/adj"
-                android:layout_gravity="center_vertical|right"
-                android:layout_width="25dp"
-                android:layout_height="25dp"/>
-        </FrameLayout>
-
-        <TextView
-            android:id="@+id/tv_time"
-            android:layout_centerVertical="true"
-            android:gravity="center_vertical"
-            android:layout_toLeftOf="@id/fl"
-            android:textSize="18sp"
-            android:text="2"
-            android:textColor="#978c8c"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-        <TextView
-            android:id="@+id/tv_message"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="message"
-            android:layout_below="@id/fl"
-            android:gravity="right"
-            android:layout_marginTop="3dp"
-            android:textSize="16sp"
-            android:layout_marginRight="43dp"
-            />
-    </RelativeLayout>
+    </LinearLayout>
 
 </RelativeLayout>

@@ -15,19 +15,47 @@
         android:divider="@null"
         android:layout_height="0dp"/>
 
-    <View
-        android:background="#6e6060"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"/>
 
-    <com.example.kirito.wechatrecordbutton.support.AudioButton
-        android:id="@+id/btn"
-        android:layout_marginTop="5dp"
-        android:text="@string/btn_state_normal"
-        android:textSize="18sp"
-        android:background="@drawable/btn_state_normal_bcg"
-        android:layout_marginLeft="50dp"
-        android:layout_marginRight="50dp"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        android:layout_height="60dp"
+        android:gravity="center"
+        android:background="#EBECEE"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="5dp"
+            android:src="@drawable/robot_new_keyboard"
+            />
+
+        <com.example.kirito.wechatrecordbutton.support.AudioButton
+            android:id="@+id/btn"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:layout_marginLeft="10dp"
+            android:layout_weight="1"
+            android:background="@drawable/btn_state_normal_bcg"
+            android:text="@string/btn_state_normal"
+            android:textColor="#4C4F5C"
+            android:textSize="18sp"/>
+
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="5dp"
+            android:src="@drawable/robot_icon_chat_grid_press"
+            />
+        <ImageView
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
+            android:src="@drawable/robot_icon_chat_extra_press"
+            />
+    </LinearLayout>
+
+
 </LinearLayout>

@@ -56,11 +56,11 @@ public class ListViewAdapter extends ArrayAdapter<MainActivity.RecordItem> {
         holder.message.setText(item.getMessage());
         ViewGroup.LayoutParams lp = holder.length.getLayoutParams();
         //控制录音长度最长为：itemMinWidth + itemMaxWidth,以及类型转换
-        if (time <= 60){
-            lp.width = (int) (min_length + max_length * time / 60f);
-        }else {
-            lp.width = min_length + max_length;
-        }
+//        if (time <= 60){
+//            lp.width = (int) (min_length + max_length * time / 60f);
+//        }else {
+//            lp.width = min_length + max_length;
+//        }
         return convertView;
     }
 
