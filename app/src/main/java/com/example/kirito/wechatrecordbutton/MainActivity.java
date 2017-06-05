@@ -38,6 +38,7 @@ import java.util.List;
  * 最终在handler里处理
  */
 public class MainActivity extends AppCompatActivity {
+    private static final int DELEAY =1000 ;
     private ListView lv;
     private AudioButton mAudioButton;
     private List<RecordItem> items;
@@ -64,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView tvDesc2;
     private static final int SENG_MESSAGE=100;
 
+    private int DELEAY_TIME=1000;
     private Handler mHandler=new Handler(){
         @Override
         public void handleMessage(Message msg) {
@@ -76,18 +78,24 @@ public class MainActivity extends AppCompatActivity {
                     if(haveMessage && isRelease){
                         mXunFeiSdk.stop();
                         mXunFeiSdk.clearnCache();
-                        dialogShow(false);
-                        RecordItem item = new RecordItem(mMessage, mXunFeiSdk.getPath(), (int) mTime);
-                        items.add(item);
-                        adapter.notifyDataSetChanged();
-                        //每次更新完listview指向最后的item
-                        lv.setSelection(items.size() - 1);
-                        mMessage="";
-                        etMessage.setText("");
-                        mXunFeiSdk.cancelRecoder();
-                        isRelease=false;
-                        haveMessage=false;
+                        mHandler.sendEmptyMessageDelayed(DELEAY, DELEAY_TIME);//增加用户体验，动画做1s后发送
                     }
+                    break;
+
+                case DELEAY://1s后隐藏动画，让用户了解发送内容
+                    dialogShow(false);
+                    RecordItem item = new RecordItem(mMessage, mXunFeiSdk.getPath(), (int) mTime);
+                    items.add(item);
+                    adapter.notifyDataSetChanged();
+                    //每次更新完listview指向最后的item
+                    if(items.size() >1){
+                        lv.setSelection(items.size() - 1);
+                    }
+                    mMessage="";
+                    etMessage.setText("");
+                    mXunFeiSdk.cancelRecoder();
+                    isRelease=false;
+                    haveMessage=false;
                     break;
             }
         }
@@ -224,7 +232,6 @@ public class MainActivity extends AppCompatActivity {
         mXunFeiSdk.setOnXFSdkListener(new XunFeiSdk.XunFeiSdkListener() {
             @Override
             public void onVolumeChanged(int volume) {
-//                mAudioButton.setVolume(volume);
                 int res_id = mContext.getResources().getIdentifier("record_animate_" + volume, "drawable", mContext.getPackageName());
                 ivVoice.setImageResource(res_id);
             }
@@ -270,6 +277,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         MediaPlay.onRelease();
+        mHandler.removeCallbacksAndMessages(null);
     }
 
     public void dialogShow(boolean isShow) {
