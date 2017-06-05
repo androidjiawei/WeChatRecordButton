@@ -64,7 +64,7 @@ public class XunFeiSdk {
         }
     }
 
-    //取消所有的回话
+    //取消所有的回话 在会话被取消后，当前会话结束，未返回的结果将不再返回
     public void cancelRecoder() {
         mIat.cancel();
     }
@@ -96,7 +96,7 @@ public class XunFeiSdk {
 //            showTip(error.getPlainDescription(true));
             Log.e(TAG, "onError");
             if(mListener!=null){
-//                mListener.onError();
+                mListener.onError();
             }
         }
 
@@ -154,8 +154,13 @@ public class XunFeiSdk {
         StringBuffer resultBuffer = new StringBuffer();
         for (String key : mIatResults.keySet()) {
             resultBuffer.append(mIatResults.get(key));
+            Log.e(TAG, "printResult: 循环内"+ mIatResults.get(key));
         }
         return resultBuffer.toString();
+    }
+
+    public void clearnCache(){
+        mIatResults.clear();
     }
 
     private void setParam() {
@@ -209,8 +214,19 @@ public class XunFeiSdk {
     }
 
     public interface XunFeiSdkListener {
+        /**
+         * 声音大小改变回调
+         * @param volume 1-30
+         */
         void onVolumeChanged(int volume);
+
+        /**
+         * 识别出说话内容时回调
+         * @param result
+         * @param isLast
+         */
         void onResult(String result, boolean isLast);
         void onInitComplete();
+        void onError();
     }
 }

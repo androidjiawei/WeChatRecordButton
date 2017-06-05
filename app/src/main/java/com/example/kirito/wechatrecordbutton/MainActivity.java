@@ -1,15 +1,13 @@
 package com.example.kirito.wechatrecordbutton;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.content.Context;
 import android.graphics.drawable.AnimationDrawable;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -29,6 +27,16 @@ import com.iflytek.cloud.SpeechRecognizer;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * listView显示语音聊天内容
+ *
+ * 下方控制View的显示和隐藏模拟对话框
+ *
+ * View上根据不同状态来隐藏显示部分子View
+ *
+ * 松手回调finishRecord()及 消息回调onResult(),先后顺序不确定因此用两个bool值控制，isRelease和haveMessage
+ * 最终在handler里处理
+ */
 public class MainActivity extends AppCompatActivity {
     private ListView lv;
     private AudioButton mAudioButton;
@@ -54,6 +62,36 @@ public class MainActivity extends AppCompatActivity {
     private long current;
     private TextView tvDesc1;
     private TextView tvDesc2;
+    private static final int SENG_MESSAGE=100;
+
+    private Handler mHandler=new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+
+            switch (msg.what){
+                case SENG_MESSAGE:
+                    if(isRelease){
+                        mXunFeiSdk.stop();
+                    }
+                    if(haveMessage && isRelease){
+                        mXunFeiSdk.stop();
+                        mXunFeiSdk.clearnCache();
+                        dialogShow(false);
+                        RecordItem item = new RecordItem(mMessage, mXunFeiSdk.getPath(), (int) mTime);
+                        items.add(item);
+                        adapter.notifyDataSetChanged();
+                        //每次更新完listview指向最后的item
+                        lv.setSelection(items.size() - 1);
+                        mMessage="";
+                        etMessage.setText("");
+                        mXunFeiSdk.cancelRecoder();
+                        isRelease=false;
+                        haveMessage=false;
+                    }
+                    break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,58 +104,24 @@ public class MainActivity extends AppCompatActivity {
         mAudioButton.setOnAudioButtonListener(new AudioButton.onAudioListener() {
             @Override
             public void onLongClick(View v) {
-                Log.e(TAG, "onLongClick: ");
                 current = System.currentTimeMillis();
                 mXunFeiSdk.startRecognizer();
-//                mAudioButton.audioPrepared();
             }
 
             @Override
             public void finishRecord() {//up回调
                 isRelease = true;
-                mTime = (int) ((System.currentTimeMillis() - current) / 1000f + 1);
+                mTime = (int) ((System.currentTimeMillis() - current) / 1000f + 1);//从说话到松手 间隔的时间
+                //松手后布局跟着变化
                 ivVoice.setVisibility(View.GONE);
                 ivLoading.setVisibility(View.VISIBLE);
+                //做动画
                 final ObjectAnimator ob = ObjectAnimator.ofFloat(ivLoading, "rotation", 0f, 360f);
+                ob.setRepeatCount(ObjectAnimator.INFINITE);
+                ob.setRepeatMode(ObjectAnimator.RESTART);
                 ob.setDuration(2000);
-                ob.addListener(new AnimatorListenerAdapter() {
-
-                    @Override
-                    public void onAnimationEnd(Animator animation) {
-                        if (/*haveMessage && isRelease*/true) {
-                            if (TextUtils.isEmpty(mMessage)) {
-                                setShortView("抱歉，我没听清", "请说话大声些，或换个安静的环境");
-                                mLlUpCancel.setVisibility(View.INVISIBLE);
-                                mLlVoice.setVisibility(View.INVISIBLE);
-                                return;
-                            }
-                            dialogShow(false);
-                            mXunFeiSdk.stop();
-                            RecordItem item = new RecordItem(mMessage, mXunFeiSdk.getPath(), (int) mTime);
-                            items.add(item);
-                            adapter.notifyDataSetChanged();
-                            //每次更新完listview指向最后的item
-                            lv.setSelection(items.size() - 1);
-                            mMessage="";
-                            etMessage.setText("");
-                            mXunFeiSdk.cancelRecoder();
-
-                        }/*else{
-                            ob.start();
-                        }*/
-                    }
-                });
                 ob.start();
-                if (haveMessage) {
-//                    isRelease=false;
-//                    mXunFeiSdk.stop();
-//                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) time);
-//                    items.add(item);
-////                    adapter.notifyDataSetChanged();
-//                    //每次更新完listview指向最后的item
-//                    lv.setSelection(items.size() - 1);
-//                    haveMessage=false;
-                }
+                mHandler.sendEmptyMessage(SENG_MESSAGE);
             }
 
             @Override
@@ -227,26 +231,25 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onResult(String message, boolean isLast) {
-                Log.e(TAG, "isLast: " + isLast);
-                haveMessage = isLast;
                 mMessage = message;
-//              mAudioButton.setMessage(message);
                 etMessage.setText(message);
                 etMessage.setSelection(message.length() - 1);
-                if (isRelease) {
-//                    mXunFeiSdk.stop();
-//                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) mTime);
-//                    items.add(item);
-////                    adapter.notifyDataSetChanged();
-//                    //每次更新完listview指向最后的item
-//                    lv.setSelection(items.size() - 1);
-//                    isRelease=false;
-//                    haveMessage=false;
-                }
+
+                //要确定是最后的识别 才dismiss
+                haveMessage = isLast;
+                mHandler.sendEmptyMessage(SENG_MESSAGE);
             }
 
             @Override
             public void onInitComplete() {
+            }
+
+            //没有识别出内容时会回调
+            @Override
+            public void onError() {
+                setShortView("抱歉，我没听清", "请说话大声些，或换个安静的环境");
+                mLlUpCancel.setVisibility(View.INVISIBLE);
+                mLlVoice.setVisibility(View.INVISIBLE);
             }
         });
     }
