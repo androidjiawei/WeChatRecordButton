@@ -95,6 +95,9 @@ public class XunFeiSdk {
             // 如果使用本地功能（语记）需要提示用户开启语记的录音权限。
 //            showTip(error.getPlainDescription(true));
             Log.e(TAG, "onError");
+            if(mListener!=null){
+//                mListener.onError();
+            }
         }
 
         @Override
@@ -106,22 +109,18 @@ public class XunFeiSdk {
 
         @Override
         public void onResult(RecognizerResult results, boolean isLast) {
-            Log.e(TAG, "onResult" + System.currentTimeMillis());
             String result = printResult(results);
-            Log.e(TAG, "onResult" + results.getResultString());
-
+            Log.e(TAG, "printResult:返回的result "+result);
 //            if (isLast) {
                 if (mListener != null) {
-                    mListener.onResult(result);
+                    mListener.onResult(result,isLast);
 //                }
             }
         }
 
         @Override
         public void onVolumeChanged(int volume, byte[] data) {
-//            showTip("当前正在说话，音量大小：" + volume);
-            Log.d(TAG, "返回音频数据：" + data.length);
-            Log.e(TAG, "onVolumeChanged" + volume);
+//            Log.e(TAG, "onVolumeChanged" + volume);
             if (mListener != null) {
                 mListener.onVolumeChanged(getVoiceLevel(volume));
             }
@@ -140,7 +139,7 @@ public class XunFeiSdk {
 
     private String printResult(RecognizerResult results) {
         String text = JsonParser.parseIatResult(results.getResultString());
-
+        Log.e(TAG, "printResult: text"+text );
         String sn = null;
         // 读取json结果中的sn字段
         try {
@@ -183,7 +182,7 @@ public class XunFeiSdk {
         mIat.setParameter(SpeechConstant.VAD_BOS, "4000");
 
         // 设置语音后端点:后端点静音检测时间，即用户停止说话多长时间内即认为不再输入， 自动停止录音
-        mIat.setParameter(SpeechConstant.VAD_EOS, "1000");
+        mIat.setParameter(SpeechConstant.VAD_EOS, "5000");
 
         // 设置标点符号,设置为"0"返回结果无标点,设置为"1"返回结果有标点
         mIat.setParameter(SpeechConstant.ASR_PTT, "1");
@@ -198,8 +197,9 @@ public class XunFeiSdk {
         return UUID.randomUUID().toString();
     }
 
+    //最大值是23
     public int getVoiceLevel(int current) {
-        return 7 * current / 30 + 1;
+        return 23 * current / 30 + 1;
     }
 
     XunFeiSdkListener mListener;
@@ -210,9 +210,7 @@ public class XunFeiSdk {
 
     public interface XunFeiSdkListener {
         void onVolumeChanged(int volume);
-
-        void onResult(String result);
-
+        void onResult(String result, boolean isLast);
         void onInitComplete();
     }
 }

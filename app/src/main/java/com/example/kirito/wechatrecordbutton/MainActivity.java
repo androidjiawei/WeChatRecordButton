@@ -1,12 +1,24 @@
 package com.example.kirito.wechatrecordbutton;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.content.Context;
 import android.graphics.drawable.AnimationDrawable;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 import com.example.kirito.wechatrecordbutton.adapter.ListViewAdapter;
 import com.example.kirito.wechatrecordbutton.support.AudioButton;
@@ -19,63 +31,146 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private ListView lv;
-    private AudioButton ab;
+    private AudioButton mAudioButton;
     private List<RecordItem> items;
     private ListViewAdapter adapter;
     private View animeView;
     private SpeechRecognizer mIat;//讯飞的录音识别类
-    String TAG=getClass().getSimpleName().toString();
+    String TAG = getClass().getSimpleName().toString();
     private XunFeiSdk mXunFeiSdk;
     private String mMessage;
     private boolean haveMessage;
     private boolean isRelease;
     private float mTime;
+    private LinearLayout mLlVoice;
+    private LinearLayout mLlUpCancel;
+    private LinearLayout mLlShort;
+    private ImageView ivVoice;
+    private Context mContext = this;
+    private TextView tvLabel;
+    private RelativeLayout rlDialog;
+    private EditText etMessage;
+    private ImageView ivLoading;
+    private long current;
+    private TextView tvDesc1;
+    private TextView tvDesc2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         initXunFei();
-        lv = (ListView) findViewById(R.id.lv);
-        ab = (AudioButton) findViewById(R.id.btn);
+        initView();
         items = new ArrayList<>();
 
-        ab.setOnAudioButtonListener(new AudioButton.onAudioListener() {
+        mAudioButton.setOnAudioButtonListener(new AudioButton.onAudioListener() {
             @Override
             public void onLongClick(View v) {
+                Log.e(TAG, "onLongClick: ");
+                current = System.currentTimeMillis();
                 mXunFeiSdk.startRecognizer();
-                ab.audioPrepared();
+//                mAudioButton.audioPrepared();
             }
 
             @Override
-            public void finishRecord(float time) {
-                isRelease=true;
-                mTime=time;
-                if(haveMessage){
-                    isRelease=false;
-                    mXunFeiSdk.stop();
-                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) time);
-                    items.add(item);
-                    adapter.notifyDataSetChanged();
-                    //每次更新完listview指向最后的item
-                    lv.setSelection(items.size() - 1);
-                    haveMessage=false;
-                }
+            public void finishRecord() {//up回调
+                isRelease = true;
+                mTime = (int) ((System.currentTimeMillis() - current) / 1000f + 1);
+                ivVoice.setVisibility(View.GONE);
+                ivLoading.setVisibility(View.VISIBLE);
+                final ObjectAnimator ob = ObjectAnimator.ofFloat(ivLoading, "rotation", 0f, 360f);
+                ob.setDuration(2000);
+                ob.addListener(new AnimatorListenerAdapter() {
 
+                    @Override
+                    public void onAnimationEnd(Animator animation) {
+                        if (/*haveMessage && isRelease*/true) {
+                            if (TextUtils.isEmpty(mMessage)) {
+                                setShortView("抱歉，我没听清", "请说话大声些，或换个安静的环境");
+                                mLlUpCancel.setVisibility(View.INVISIBLE);
+                                mLlVoice.setVisibility(View.INVISIBLE);
+                                return;
+                            }
+                            dialogShow(false);
+                            mXunFeiSdk.stop();
+                            RecordItem item = new RecordItem(mMessage, mXunFeiSdk.getPath(), (int) mTime);
+                            items.add(item);
+                            adapter.notifyDataSetChanged();
+                            //每次更新完listview指向最后的item
+                            lv.setSelection(items.size() - 1);
+                            mMessage="";
+                            etMessage.setText("");
+                            mXunFeiSdk.cancelRecoder();
+
+                        }/*else{
+                            ob.start();
+                        }*/
+                    }
+                });
+                ob.start();
+                if (haveMessage) {
+//                    isRelease=false;
+//                    mXunFeiSdk.stop();
+//                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) time);
+//                    items.add(item);
+////                    adapter.notifyDataSetChanged();
+//                    //每次更新完listview指向最后的item
+//                    lv.setSelection(items.size() - 1);
+//                    haveMessage=false;
+                }
             }
 
             @Override
             public void onCancel() {
+                etMessage.setText("");
+                mMessage="";
+                dialogShow(false);//dismiss
                 mXunFeiSdk.cancelRecoder();
             }
+
+            @Override
+            public void showVoiceLevel() {//down事件回调
+                dialogShow(true);
+                mLlVoice.setVisibility(View.VISIBLE);
+                mLlUpCancel.setVisibility(View.INVISIBLE);
+                mLlShort.setVisibility(View.INVISIBLE);
+                tvLabel.setText(R.string.dialog_recording);
+            }
+
+            @Override
+            public void showTooShort() {
+                mLlUpCancel.setVisibility(View.INVISIBLE);
+                mLlVoice.setVisibility(View.INVISIBLE);
+                setShortView("说话时间太短了", "按住说话，说完再松开哦");
+            }
+
+            @Override
+            public void showWantToCancel() {
+                mLlUpCancel.setVisibility(View.VISIBLE);
+                mLlVoice.setVisibility(View.INVISIBLE);
+                mLlShort.setVisibility(View.INVISIBLE);
+            }
         });
-        adapter = new ListViewAdapter(MainActivity.this,items);
+
+        adapter = new ListViewAdapter(MainActivity.this, items);
         lv.setAdapter(adapter);
+        lv.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                switch (motionEvent.getAction()){
+                    case MotionEvent.ACTION_DOWN:
+                        dialogShow(false);
+                        break;
+                }
+                return false;
+            }
+        });
         lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                dialogShow(false);
                 //每次开启动画前，先设置为默认状态
-                if (animeView != null){
+                if (animeView != null) {
                     animeView.setBackgroundResource(R.drawable.adj);
                     animeView = null;
                 }
@@ -97,27 +192,56 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    private void setShortView(String desc1, String desc2) {
+        mLlShort.setVisibility(View.VISIBLE);
+        tvDesc1.setText(desc1);//"说话时间太短了"
+        tvDesc2.setText(desc2);//"按住说话，说完再松开哦"
+    }
+
+
+    private void initView() {
+        lv = (ListView) findViewById(R.id.lv);
+        mAudioButton = (AudioButton) findViewById(R.id.btn);
+        mLlVoice = (LinearLayout) findViewById(R.id.ll_voice);
+        mLlUpCancel = (LinearLayout) findViewById(R.id.ll_up_cancel);
+        mLlShort = (LinearLayout) findViewById(R.id.ll_short);
+        ivVoice = (ImageView) findViewById(R.id.iv_voice);
+        tvLabel = (TextView) findViewById(R.id.tv_label);
+        rlDialog = (RelativeLayout) findViewById(R.id.rl_dialog);
+        etMessage = (EditText) findViewById(R.id.et_message);
+        ivLoading = (ImageView) findViewById(R.id.iv_loading);
+        tvDesc1 = (TextView) findViewById(R.id.tv_desc1);
+        tvDesc2 = (TextView) findViewById(R.id.tv_desc2);
+
+    }
+
     private void initXunFei() {
         mXunFeiSdk = XunFeiSdk.getInstance(this);
         mXunFeiSdk.setOnXFSdkListener(new XunFeiSdk.XunFeiSdkListener() {
             @Override
             public void onVolumeChanged(int volume) {
-                ab.setVolume(volume);
+//                mAudioButton.setVolume(volume);
+                int res_id = mContext.getResources().getIdentifier("record_animate_" + volume, "drawable", mContext.getPackageName());
+                ivVoice.setImageResource(res_id);
             }
 
             @Override
-            public void onResult(String message) {
-                haveMessage=true;
-                mMessage =message;
-                if(isRelease){
-                    mXunFeiSdk.stop();
-                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) mTime);
-                    items.add(item);
-                    adapter.notifyDataSetChanged();
-                    //每次更新完listview指向最后的item
-                    lv.setSelection(items.size() - 1);
-                    isRelease=false;
-                    haveMessage=false;
+            public void onResult(String message, boolean isLast) {
+                Log.e(TAG, "isLast: " + isLast);
+                haveMessage = isLast;
+                mMessage = message;
+//              mAudioButton.setMessage(message);
+                etMessage.setText(message);
+                etMessage.setSelection(message.length() - 1);
+                if (isRelease) {
+//                    mXunFeiSdk.stop();
+//                    RecordItem item = new RecordItem(mMessage,mXunFeiSdk.getPath(),(int) mTime);
+//                    items.add(item);
+////                    adapter.notifyDataSetChanged();
+//                    //每次更新完listview指向最后的item
+//                    lv.setSelection(items.size() - 1);
+//                    isRelease=false;
+//                    haveMessage=false;
                 }
             }
 
@@ -145,8 +269,19 @@ public class MainActivity extends AppCompatActivity {
         MediaPlay.onRelease();
     }
 
+    public void dialogShow(boolean isShow) {
+        if (isShow) {
+            ivVoice.setVisibility(View.VISIBLE);
+            rlDialog.setVisibility(View.VISIBLE);
+            ivLoading.setVisibility(View.GONE);
+        } else {
+            rlDialog.setVisibility(View.GONE);
+        }
+
+    }
+
     //RecordItem放置录音文件的路径和录音时间
-    public class RecordItem{
+    public class RecordItem {
         private String path;
         private int time;
 
@@ -176,8 +311,8 @@ public class MainActivity extends AppCompatActivity {
             this.time = time;
         }
 
-        public RecordItem(String message,String path, int time) {
-            this.message=message;
+        public RecordItem(String message, String path, int time) {
+            this.message = message;
             this.path = path;
             this.time = time;
         }

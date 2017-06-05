@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -27,12 +28,12 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
 
     private int cur_state = BTN_STATE_NORMAL;
 
-    private DialogManager mDialogManager;
+//    private DialogManager mDialogManager;
     //标志audio recorder是否prepare完毕
     private boolean isRecording;
     private static final int MIN_CABCEL_Y = 100;
 
-//    private AudioManager am;
+    //    private AudioManager am;
     //是否触发了onLongClick
     private boolean isLongClick;
 
@@ -41,18 +42,19 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
     private onAudioListener mListener;
 
     private Handler handler = new Handler();
-    private Handler mHandler = new Handler(){
+    private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            switch (msg.what){
+            switch (msg.what) {
                 case AUDIO_PREPARED:
                     //在准备好audio recorder之后
                     isRecording = true;
-                    mDialogManager.showDialog();
-                    handler.post(timeRunnable);
+                    //这里使用的是父容器的高 根据实际使用情况改变
+//                    mDialogManager.showDialog(((View) getParent()).getHeight());
+//                    handler.post(timeRunnable);
                     break;
                 case AUDIO_CANCEL:
-                    mDialogManager.dismissDialog();
+//                    mDialogManager.dismissDialog();
                     break;
                 case AUDIO_VOICE_CHANGE:
 //                    mDialogManager.setVoiceLevel(am.getVoiceLevel(7));
@@ -64,47 +66,55 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
     private Runnable timeRunnable = new Runnable() {
         @Override
         public void run() {
-            if (isRecording && !isVoiceConflict){
+            if (isRecording && !isVoiceConflict) {
                 mTime += 0.1;
-                mHandler.sendEmptyMessage(AUDIO_VOICE_CHANGE);
-                handler.postDelayed(timeRunnable,100);
+//              mHandler.sendEmptyMessage(AUDIO_VOICE_CHANGE);
+//                handler.postDelayed(timeRunnable, 100);
             }
         }
     };
 
     public void setVolume(int volume) {
-        mDialogManager.setVoiceLevel(volume);
+//        mDialogManager.setVoiceLevel(volume);
     }
 
     //录音完成的回调
     public interface onAudioListener {
         void onLongClick(View v);
-        void finishRecord(float time);
+
+        void finishRecord();
+
         void onCancel();
+
+        void showVoiceLevel();
+
+        void showTooShort();
+
+        void showWantToCancel();
     }
 
-    public void setOnAudioButtonListener(onAudioListener listener){
+    public void setOnAudioButtonListener(onAudioListener listener) {
         mListener = listener;
     }
 
     private static final String TAG = "AudioButton";
 
     public AudioButton(Context context) {
-        this(context,null);
+        this(context, null);
     }
 
     public AudioButton(Context context, AttributeSet attrs) {
         super(context, attrs);
-        mDialogManager = new DialogManager(context);
+//        mDialogManager = new DialogManager(context);
 //        am = AudioManager.getInstance(Environment.getExternalStorageDirectory() + "/zzl_audio");
-
 //        am.setAudioPrepareListener(this);
         setOnLongClickListener(new OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
+                Log.e(TAG, "setOnLongClickListener " );
                 isLongClick = true;
                 //调用sdk开始录音 且监控音量大小 松手后停止
-                if(mListener!=null){
+                if (mListener != null) {
                     mListener.onLongClick(v);
                 }
 //                am.prepareAudio();
@@ -119,16 +129,29 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
         //是event.getX() 不是getX()
         int x = (int) event.getX();
         int y = (int) event.getY();
-        switch (action){
+        switch (action) {
             case MotionEvent.ACTION_DOWN:
+                Log.e(TAG, "onTouchEvent:ACTION_DOWN " );
                 changeButtonState(BTN_STATE_RECORDING);
+                
+                //显示对话框 开始计时
+//              audioPrepared();
                 break;
             case MotionEvent.ACTION_UP:
-                if (!isLongClick){
-                    reset();
-                    mDialogManager.dismissDialog();
-                    return super.onTouchEvent(event);
-                }else if(!isRecording || mTime < 0.6){
+                Log.e(TAG, "onTouchEvent:ACTION_UP " );
+                //松开手指有三种状态
+                //1.时间太短
+                //2.未识别内容
+                //3.识别出内容 1.状态是 正常做动画发送且关闭对话框 2.状态是取消 dismiss什么也不做
+                if (!isLongClick) {//如果不是长按就说明时间太短
+                    if(mListener!=null){// TODO: 展示showRecording
+                        mListener.showTooShort();
+                    }
+//                    reset();
+//                    mDialogManager.dismissDialog();
+//                    mDialogManager.tooShort();
+//                    return super.onTouchEvent(event);
+                }/*else if(!isRecording || mTime < 0.6){
                     //设置isVoiceConflict 为true防止setVoiceLevel方法更改图标，造成图标显示混乱！
                     isVoiceConflict = true;
                     mDialogManager.tooShort();
@@ -137,31 +160,32 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
                     }
 //                    am.cancelAudio();
                     //延时让tooShort的图标显示出来
-                    mHandler.sendEmptyMessageDelayed(AUDIO_CANCEL,1300);
-                }else if (cur_state == BTN_STATE_RECORDING){//正常退出，获取音频路径，时长
+//                    mHandler.sendEmptyMessageDelayed(AUDIO_CANCEL,1300);
+                }*/
+                else if (cur_state == BTN_STATE_RECORDING) {//正常回调
 //                    am.releaseAudio();
-                    mDialogManager.dismissDialog();
-                    if (mListener != null){
-                        mListener.finishRecord(mTime);
+//                    mDialogManager.dismissDialog();
+                    if (mListener != null) {
+                        mListener.finishRecord();
                     }
-                }else if (cur_state == BTN_STATE_WANTTOCANCEL){
+                } else if (cur_state == BTN_STATE_WANTTOCANCEL) {
 //                    am.cancelAudio();
-                    if(mListener!=null){
+                    if (mListener != null) {
                         mListener.onCancel();
                     }
-                    mDialogManager.dismissDialog();
+//                    mDialogManager.dismissDialog();
                 }
                 reset();
                 break;
             case MotionEvent.ACTION_MOVE:
-                    if (isRecording){
-                        if(wantToCancel(x,y)){
-                            isVoiceConflict = true;
-                            changeButtonState(BTN_STATE_WANTTOCANCEL);
-                        }else if(!wantToCancel(x,y)){
-                            changeButtonState(BTN_STATE_RECORDING);
-                        }
+                if (true) {
+                    if (wantToCancel(x, y)) {
+                        isVoiceConflict = true;
+                        changeButtonState(BTN_STATE_WANTTOCANCEL);
+                    } else if (!wantToCancel(x, y)) {
+                        changeButtonState(BTN_STATE_RECORDING);
                     }
+                }
                 break;
         }
         return super.onTouchEvent(event);
@@ -169,15 +193,15 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
 
     private boolean wantToCancel(int x, int y) {
         //getWidth---520    getHeight---96
-        if (x > getWidth() || x < 0){
+        if (x > getWidth() || x < 0) {
             return true;
-        }else if (y > getHeight() + MIN_CABCEL_Y || y < -MIN_CABCEL_Y){
+        } else if (y > getHeight() + MIN_CABCEL_Y || y < -MIN_CABCEL_Y) {
             return true;
         }
         return false;
     }
 
-    public void reset(){
+    public void reset() {
         isLongClick = false;
         isRecording = false;
         isVoiceConflict = false;
@@ -185,25 +209,37 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
         changeButtonState(BTN_STATE_NORMAL);
     }
 
-    public void changeButtonState(int ste){
-        if (cur_state != ste){
+    /**
+     * 根据状态setText 和bg
+     * 切换显示对应内容
+     *
+     * @param ste
+     */
+    public void changeButtonState(int ste) {
+        if (cur_state != ste) {
             cur_state = ste;
-            switch (ste){
+            switch (ste) {
                 case BTN_STATE_NORMAL:
                     setText(getResources().getString(R.string.btn_state_normal));
                     setBackgroundResource(R.drawable.btn_state_normal_bcg);
                     break;
                 case BTN_STATE_RECORDING:
                     setText(getResources().getString(R.string.btn_state_recordinng));
-                    setBackgroundResource(R.drawable.btn_state_recording_bcg);
+//                    setBackgroundResource(R.drawable.btn_state_recording_bcg);
 //                    if (isRecording){
-                        mDialogManager.showRecording();
+//                    mDialogManager.showRecording();
 //                    }
+                    if(mListener!=null){// TODO: 展示showRecording
+                        mListener.showVoiceLevel();
+                    }
                     break;
                 case BTN_STATE_WANTTOCANCEL:
                     setText(getResources().getString(R.string.btn_state_recordinng));
                     setBackgroundResource(R.drawable.btn_state_recording_bcg);
-                    mDialogManager.wantToCancel();
+//                    mDialogManager.wantToCancel();
+                    if(mListener!=null){// TODO: 展示showRecording
+                        mListener.showWantToCancel();
+                    }
                     break;
             }
         }
@@ -211,5 +247,9 @@ public class AudioButton extends android.support.v7.widget.AppCompatButton {
 
     public void audioPrepared() {
         mHandler.sendEmptyMessage(AUDIO_PREPARED);
+    }
+
+    public void setMessage(String message) {
+//        mDialogManager.setMessage(message);
     }
 }
